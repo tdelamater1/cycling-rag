@@ -49,8 +49,8 @@ async def retrieve_similar_rides(
         List of hit dicts with keys: id, document, metadata, distance.
     """
     where = _date_where(since, until)
+    collection = get_collection()  # singleton — safe to call from main thread
     loop = asyncio.get_running_loop()
-    collection = await loop.run_in_executor(None, get_collection)
     fn = partial(query_similar, collection, query_text, n_results, where)
     return await loop.run_in_executor(None, fn)
 

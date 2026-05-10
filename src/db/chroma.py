@@ -2,6 +2,8 @@
 
 from typing import Any
 
+import threading
+
 import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
 
@@ -12,19 +14,28 @@ _EMBED_MODEL = "all-MiniLM-L6-v2"
 
 _embedding_fn = SentenceTransformerEmbeddingFunction(model_name=_EMBED_MODEL)
 
+_lock = threading.Lock()
+_collection: chromadb.Collection | None = None
+
 
 def get_collection() -> chromadb.Collection:
-    """Return the ride_summaries collection, creating it if it doesn't exist.
+    """Return the ride_summaries collection, initialising it once on first call.
 
-    The client is created fresh each call (PersistentClient is lightweight to
-    construct and handles its own locking on the path).
+    Uses a module-level singleton so the ChromaDB client and its Rust bindings
+    are created in the main thread and reused, rather than recreated per-request
+    inside a thread executor.
     """
-    client = chromadb.PersistentClient(path=config.chroma_path)
-    return client.get_or_create_collection(
-        name=_COLLECTION_NAME,
-        embedding_function=_embedding_fn,
-        metadata={"hnsw:space": "cosine"},
-    )
+    global _collection
+    if _collection is None:
+        with _lock:
+            if _collection is None:
+                client = chromadb.PersistentClient(path=config.chroma_path)
+                _collection = client.get_or_create_collection(
+                    name=_COLLECTION_NAME,
+                    embedding_function=_embedding_fn,
+                    metadata={"hnsw:space": "cosine"},
+                )
+    return _collection
 
 
 # ---------------------------------------------------------------------------

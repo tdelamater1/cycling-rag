@@ -6,7 +6,7 @@ asyncpg>=0.29
 psycopg2-binary>=2.9  # used by migration scripts and sync tooling
 
 # Vector store
-chromadb>=0.5,<0.6
+chromadb>=0.5
 
 # Embeddings
 sentence-transformers>=3.0
