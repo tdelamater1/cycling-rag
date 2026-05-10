@@ -89,7 +89,7 @@ async def _call_ollama(system_prompt: str, user_prompt: str) -> str:
         "stream": False,
         "think": False,  # suppress qwen3 <think> block
     }
-    async with httpx.AsyncClient(timeout=900.0) as client:
+    async with httpx.AsyncClient(timeout=config.ollama_timeout) as client:
         response = await client.post(url, json=payload)
         response.raise_for_status()
     return response.json()["message"]["content"]

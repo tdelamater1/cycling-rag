@@ -15,6 +15,7 @@ class Config:
     chroma_path: str = os.getenv("CHROMA_PATH", "./chroma_db")
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://192.168.4.93:11434")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen3:8b")
+    ollama_timeout: float = float(os.getenv("OLLAMA_TIMEOUT", "1800"))
 
 
 config = Config()
