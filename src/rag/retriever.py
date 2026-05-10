@@ -1,19 +1,26 @@
 """Hybrid retriever: async wrapper around ChromaDB semantic search."""
 
 import asyncio
-from datetime import date
+from datetime import date, datetime, timezone
 from functools import partial
 
 from src.db.chroma import get_collection, query_similar
 
 
 def _date_where(since: date | None, until: date | None) -> dict | None:
-    """Build a ChromaDB where-filter for a date range on the start_date field."""
+    """Build a ChromaDB where-filter for a date range using unix timestamps.
+
+    ChromaDB $gte/$lte operators require numeric values, so we use start_ts
+    (int unix timestamp) rather than the start_date string field.
+    """
+    def _to_ts(d: date) -> int:
+        return int(datetime(d.year, d.month, d.day, tzinfo=timezone.utc).timestamp())
+
     conditions = []
     if since:
-        conditions.append({"start_date": {"$gte": since.isoformat()}})
+        conditions.append({"start_ts": {"$gte": _to_ts(since)}})
     if until:
-        conditions.append({"start_date": {"$lte": until.isoformat()}})
+        conditions.append({"start_ts": {"$lte": _to_ts(until)}})
     if not conditions:
         return None
     if len(conditions) == 1:
@@ -42,7 +49,7 @@ async def retrieve_similar_rides(
         List of hit dicts with keys: id, document, metadata, distance.
     """
     where = _date_where(since, until)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     collection = await loop.run_in_executor(None, get_collection)
     fn = partial(query_similar, collection, query_text, n_results, where)
     return await loop.run_in_executor(None, fn)

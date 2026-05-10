@@ -1,7 +1,7 @@
 """Build natural language summaries from Postgres activities and store in ChromaDB."""
 
 import asyncio
-from datetime import date
+from datetime import date, timezone
 
 import asyncpg
 
@@ -94,9 +94,14 @@ def build_metadata(row: asyncpg.Record) -> dict:
     Args:
         row: asyncpg Record from the activities table.
     """
+    dt = row["start_date"]
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+
     meta: dict = {
         "activity_id": row["id"],
-        "start_date": row["start_date"].strftime("%Y-%m-%d"),
+        "start_date": dt.strftime("%Y-%m-%d"),      # human-readable, for display
+        "start_ts": int(dt.timestamp()),             # unix timestamp, for $gte/$lte range filters
         "sport_type": row["sport_type"],
     }
     for key in ("tss", "ctl", "atl", "tsb"):
