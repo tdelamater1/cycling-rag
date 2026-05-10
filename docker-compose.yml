@@ -1,0 +1,52 @@
+services:
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: cycling
+      POSTGRES_PASSWORD: cycling
+      POSTGRES_DB: cycling_rag
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cycling -d cycling_rag"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      # Override localhost URLs to use Docker service names
+      POSTGRES_URL: postgresql://cycling:cycling@postgres:5432/cycling_rag
+      CHROMA_PATH: /data/chroma_db
+    volumes:
+      - chroma_data:/data/chroma_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: .
+    entrypoint: ["/bin/bash", "scripts/worker.sh"]
+    env_file: .env
+    environment:
+      POSTGRES_URL: postgresql://cycling:cycling@postgres:5432/cycling_rag
+      CHROMA_PATH: /data/chroma_db
+    volumes:
+      - chroma_data:/data/chroma_db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  chroma_data:
