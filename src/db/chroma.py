@@ -147,7 +147,14 @@ def query_similar(
     if where:
         kwargs["where"] = where
 
-    result = collection.query(**kwargs)
+    try:
+        result = collection.query(**kwargs)
+    except Exception:
+        # Reset singleton so the next request re-reads from disk
+        global _collection
+        with _lock:
+            _collection = None
+        raise
 
     hits = []
     for i, doc_id in enumerate(result["ids"][0]):

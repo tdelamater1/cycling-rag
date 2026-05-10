@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from src.db.chroma import get_collection
 from src.rag.query_engine import run_query
 
 
@@ -26,6 +27,7 @@ class QueryResponse(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    get_collection()  # initialise ChromaDB singleton before accepting requests
     yield
 
 
